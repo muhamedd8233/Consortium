@@ -322,18 +322,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
                 
                 if ($cluster) {
-                    $updateAnnualActualForecastQuery .= " AND cluster = :cluster";
-                    $actualForecastParams[':cluster'] = $cluster;
-                }
-                
-                $updateAnnualActualForecastStmt = $conn->prepare($updateAnnualActualForecastQuery);
-                $updateAnnualActualForecastStmt->execute($actualForecastParams);
-                
-                // Update variance percentages
+                    $updateAnnualActualForecastQuery .= "                 // Update variance percentages
                 $updateVarianceQuery = "UPDATE budget_data 
-                    SET variance_percentage = CASE 
-                        WHEN budget > 0 THEN ROUND((((COALESCE(actual,0) + COALESCE(forecast,0)) - budget) / ABS(budget)) * 100, 2)
-                        WHEN budget = 0 AND (COALESCE(actual,0) + COALESCE(forecast,0)) > 0 THEN 100.00
+                    SET variance_percentage = " . getVarianceCalculationSQL() . "
+                    WHERE year2 = :year AND category_name = :categoryName";
+                
+                $varianceParams = [
+                    ':year' => $year,
+                    ':categoryName' => $originalCategoryName
+                ];(forecast,0)) > 0 THEN 100.00
                         ELSE 0.00 
                     END
                     WHERE year2 = :year AND category_name = :categoryName";
@@ -418,8 +415,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Update variance for Total row
                 $updateTotalVarianceQuery = "UPDATE budget_data 
                     SET variance_percentage = CASE 
-                        WHEN budget > 0 THEN ROUND((((COALESCE(actual,0) + COALESCE(forecast,0)) - budget) / ABS(budget)) * 100, 2)
-                        WHEN budget = 0 AND (COALESCE(actual,0) + COALESCE(forecast,0)) > 0 THEN 100.00
+                        WHEN budget > 0 THEN ROUND(((actual - budget) / ABS(budget)) * 100, 2)
+                        WHEN budget = 0 AND actual > 0 THEN 100.00
                         ELSE 0.00 
                     END
                     WHERE year2 = :year AND category_name = 'Total' AND period_name = 'Total'";
@@ -644,8 +641,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Update variance percentages
                     $updateVarianceQuery = "UPDATE budget_data 
                         SET variance_percentage = CASE 
-                            WHEN budget > 0 THEN ROUND((((COALESCE(actual,0) + COALESCE(forecast,0)) - budget) / ABS(budget)) * 100, 2)
-                            WHEN budget = 0 AND (COALESCE(actual,0) + COALESCE(forecast,0)) > 0 THEN 100.00
+                            WHEN budget > 0 THEN ROUND(((actual - budget) / ABS(budget)) * 100, 2)
+                            WHEN budget = 0 AND actual > 0 THEN 100.00
                             ELSE 0.00 
                         END
                         WHERE year2 = :year AND category_name = :categoryName";
@@ -730,8 +727,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Update variance for Total row
                     $updateTotalVarianceQuery = "UPDATE budget_data 
                         SET variance_percentage = CASE 
-                            WHEN budget > 0 THEN ROUND((((COALESCE(actual,0) + COALESCE(forecast,0)) - budget) / ABS(budget)) * 100, 2)
-                            WHEN budget = 0 AND (COALESCE(actual,0) + COALESCE(forecast,0)) > 0 THEN 100.00
+                            WHEN budget > 0 THEN ROUND(((actual - budget) / ABS(budget)) * 100, 2)
+                            WHEN budget = 0 AND actual > 0 THEN 100.00
                             ELSE 0.00 
                         END
                         WHERE year2 = :year AND category_name = 'Total' AND period_name = 'Total'";
