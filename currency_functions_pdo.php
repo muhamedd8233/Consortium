@@ -198,18 +198,65 @@ function convertBudgetData($budgetData, $targetCurrency, $rates) {
 
 /**
  * Validate currency code
- * @param string $currency Currency code to validate
- * @return bool True if valid, false otherwise
- */
-function isValidCurrency($currency) {
-    return in_array(strtoupper($currency), ['USD', 'EUR', 'ETB']);
-}
-
-/**
+ * @param st/**
  * Get currency display name
  * @param string $currency Currency code
  * @return string Display name
  */
+function getCurrencyDisplayName($currency) {
+    $names = [
+        'USD' => 'US Dollar',
+        'EUR' => 'Euro',
+        'ETB' => 'Ethiopian Birr'
+    ];
+    
+    return $names[$currency] ?? $currency;
+}
+
+/**
+ * Calculate variance percentage using actual and budget
+ * @param float $actual Actual amount
+ * @param float $budget Budget amount
+ * @return float Variance percentage (rounded to 2 decimal places)
+ */
+function calculateVariancePercentage($actual, $budget) {
+    // Handle edge cases
+    if ($budget == 0) {
+        if ($actual > 0) {
+            return 100.00; // If there's actual spending but no budget, variance is 100%
+        }
+        return 0.00; // If both actual and budget are 0, variance is 0%
+    }
+    
+    // Calculate variance: ((Actual - Budget) / Budget) * 100
+    $variance = (($actual - $budget) / abs($budget)) * 100;
+    
+    return round($variance, 2);
+}
+
+/**
+ * Calculate variance percentage for budget_data table using actual and budget
+ * This function handles the specific case where we need to update variance_percentage
+ * @param float $actual Actual amount
+ * @param float $budget Budget amount
+ * @return float Variance percentage (rounded to 2 decimal places)
+ */
+function calculateBudgetVariancePercentage($actual, $budget) {
+    return calculateVariancePercentage($actual, $budget);
+}
+
+/**
+ * Generate SQL CASE statement for variance_percentage calculation
+ * @return string SQL CASE statement for variance calculation
+ */
+function getVarianceCalculationSQL() {
+    return "CASE 
+        WHEN budget > 0 THEN ROUND(((actual - budget) / ABS(budget)) * 100, 2)
+        WHEN budget = 0 AND actual > 0 THEN 100.00
+        ELSE 0.00 
+    END";
+}
+?>*/
 function getCurrencyDisplayName($currency) {
     $names = [
         'USD' => 'US Dollar',

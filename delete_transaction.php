@@ -112,7 +112,7 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
             }
         } else {
             // Use standard cluster rates for conversion
-            include_once 'currency_functions.php';
+            include_once 'currency_functions_pdo.php';
             if ($cluster) {
                 $currencyRates = getCurrencyRatesByClusterNameMySQLi($conn, $cluster);
             } else {
@@ -255,14 +255,9 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
             if (!$updateAnnualActualForecastStmt) {
                 throw new Exception("Annual actual_plus_forecast update prepare failed: " . $conn->error);
             }
-            $updateAnnualActualForecastStmt->bind_param($annualAfTypes, ...$annualAfParams);
-            if (!$updateAnnualActualForecastStmt->execute()) {
-                throw new Exception("Annual actual_plus_forecast update failed: " . $updateAnnualActualForecastStmt->error);
-            }
-
-            // ========== UPDATE VARIANCE FOR ALL RELEVANT ROWS ==========
-            $updateVarianceQuery = "UPDATE budget_data SET variance_percentage = CASE 
-                WHEN budget > 0 THEN ROUND((((COALESCE(actual,0) + COALESCE(forecast,0)) - budget) / ABS(budget)) * 100, 2)
+            $updateAnnualActualForecast            // ========== UPDATE VARIANCE FOR ALL RELEVANT ROWS ==========
+            $updateVarianceQuery = "UPDATE budget_data SET variance_percentage = " . getVarianceCalculationSQL() . " 
+            WHERE year2 = ? AND category_name = ?";SCE(actual,0) + COALESCE(forecast,0)) - budget) / ABS(budget)) * 100, 2)
                 WHEN budget = 0 AND (COALESCE(actual,0) + COALESCE(forecast,0)) > 0 THEN 100.00
                 ELSE 0.00 
             END 

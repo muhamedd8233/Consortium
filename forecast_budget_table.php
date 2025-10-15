@@ -16,7 +16,7 @@ if (!defined('INCLUDED_SETUP')) {
     define('INCLUDED_SETUP', true);
 }
 include 'setup_database.php';
-include 'currency_functions.php';
+include 'currency_functions_pdo.php';
 
 // Get user role and cluster information
 $userRole = $_SESSION['role'] ?? 'finance_officer';
@@ -365,10 +365,9 @@ if (isset($section2Data['Grand Total'])) unset($section2Data['Grand Total']);
 foreach ($section2Data as $categoryName => $periods) {
   if (strtolower($categoryName) === 'total' || strtolower($categoryName) === 'grand total') continue;
   foreach ($periods as $row) {
-    if ($row['period_name'] === 'Annual Total') {
-      $grandTotalCalculated['budget'] += floatval($row['budget'] ?? 0);
-      $grandTotalCalculated['actual'] += floatval($row['actual'] ?? 0);
-      $grandTotalCalculated['forecast'] += floatval($row['forecast'] ?? 0);
+    if ($row['period_name'] =if ($grandTotalCalculated['budget'] != 0) {
+  $grandTotalCalculated['variance_percentage'] = calculateVariancePercentage($grandTotalCalculated['actual'], $grandTotalCalculated['budget']);
+}'] ?? 0);
       $grandTotalCalculated['actual_plus_forecast'] += floatval($row['actual_plus_forecast'] ?? 0);
       break;
     }
@@ -455,24 +454,9 @@ while ($row = $section3Result->fetch_assoc()) {
   
   $seenPeriods[$key] = true;
   
-  if ($periodName == 'Annual Total' || $periodName == 'Total') {
-    $categoryTotals[$categoryName][$periodName] = $row;
-  } else {
-    if (!isset($section3Categories[$categoryName])) {
-      $section3Categories[$categoryName] = [
-        'Q1' => null,
-        'Q2' => null,
-        'Q3' => null,
-        'Q4' => null
-      ];
-    }
-    $section3Categories[$categoryName][$periodName] = $row;
-  }
-}
-
-// Calculate Grand Total for Section 3 from Annual Total values
-$section3GrandTotal = [
+  if ($per$section3GrandTotal = [
   'budget' => 0,
+  'actual' => 0,
   'actual_plus_forecast' => 0,
   'variance_percentage' => 0,
   // Initialize quarter totals for Grand Total row
@@ -484,29 +468,30 @@ $section3GrandTotal = [
   'q3_forecast' => 0,
   'q4_budget' => 0,
   'q4_forecast' => 0
-];
-
-// Remove any existing Total category to avoid confusion
-
-
-// Sum all Annual Total values for Section 3 from actual categories (not existing Total rows)
-foreach ($categoryTotals as $categoryName => $totals) {
-  // Skip any category that might be named 'Total' or similar
-  if (strtolower($categoryName) === 'total' || strtolower($categoryName) === 'grand total') continue;
-  
-  if (isset($totals['Annual Total'])) {
+];     ];
+    }
+    $section3Categories[$categoryName][$periodName] = // Sum all Annual Total values for Section 3 from actual categories (not existing Total rows)
+foreach ($categoryTotals as $cat => $totals) {
+  if ($cat !== 'Grand Total' && isset($totals['Annual Total'])) {
     $annualTotal = $totals['Annual Total'];
     $section3GrandTotal['budget'] += floatval($annualTotal['budget'] ?? 0);
+    $section3GrandTotal['actual'] += floatval($annualTotal['actual'] ?? 0);
     $section3GrandTotal['actual_plus_forecast'] += floatval($annualTotal['actual_plus_forecast'] ?? 0);
   }
-}
-
-// Calculate Grand Total variance for Section 3
+}not existing Total rows)
+forea// Calculate Grand Total variance for Section 3
 if ($section3GrandTotal['budget'] != 0) {
-  $section3GrandTotal['variance_percentage'] = round((($section3GrandTotal['actual_plus_forecast'] - $section3GrandTotal['budget']) / abs($section3GrandTotal['budget'])) * 100, 2);
-}
-
-// Add the Grand Total category with calculated values for Section 3
+  $section3GrandTotal['variance_percentage'] = calculateVariancePercentage($section3GrandTotal['actual'], $section3GrandTotal['budget']);
+}alTotal = $totals['Annual Total'];
+    $section3GrandTotal['budget'] += floatval($annualTotal['budget'] ?? $categoryTotals['Grand Total']['Annual Total'] = [
+  'category_name' => 'Grand Total',
+  'period_name' => 'Annual Total',
+  'budget' => $section3GrandTotal['budget'],
+  'actual' => $section3GrandTotal['actual'],
+  'forecast' => 0, // Section 3 doesn't show separate forecast
+  'actual_plus_forecast' => $section3GrandTotal['actual_plus_forecast'],
+  'variance_percentage' => $section3GrandTotal['variance_percentage']
+];h calculated values for Section 3
 $categoryTotals['Grand Total']['Annual Total'] = [
   'category_name' => 'Grand Total',
   'period_name' => 'Annual Total',
@@ -592,12 +577,8 @@ $lastTwoQuarters = array_slice($orderedQuarters, 2, 2);
 
 // Recompute Section 3 category annual totals using the dynamic quarter ordering
 $recomputedCategoryTotals = [];
-foreach ($section3Categories as $categoryName => $quarters) {
-    if (strtolower($categoryName) === 'grand total') { continue; }
-    $annualBudget = 0.0;
-    $annualActualPlusForecast = 0.0;
-
-    foreach ($orderedQuarters as $q) {
+foreach ($sec    // Variance = ((Actual - Budget) / Budget) * 100
+    $variance = calculateVariancePercentage($annualActual, $annualBudget);reach ($orderedQuarters as $q) {
         $row = $quarters[$q] ?? null;
         if ($row === null) { continue; }
         $annualBudget += floatval($row['budget'] ?? 0);
@@ -608,28 +589,31 @@ foreach ($section3Categories as $categoryName => $quarters) {
         }
     }
 
-    // Variance = ((Actual + Forecast - Budget) / Budget) * 100
-    $variance = ($annualBudget != 0) ? round((($annualActualPlusForecast - $annualBudget) / abs($annualBudget)) * 100, 2) : 0;
-    $recomputedCategoryTotals[$categoryName]['Annual Total'] = [
-        'category_name' => $categoryName,
-        'period_name' => 'Annual Total',
-        'budget' => $annualBudget,
-        'actual' => 0, // Section 3 does not show separate Annual Actual
-        'forecast' => 0, // Section 3 does not show separate Annual Forecast
-        'actual_plus_forecast' => $annualActualPlusForecast,
-        'variance_percentage' => $variance,
+    // Variance = ((Actua// Compute Grand Total using recomputed per-category totals
+$grandBudget = 0.0;
+$grandActual = 0.0;
+$grandActualPlusForecast = 0.0;
+foreach ($recomputedCategoryTotals as $cat => $totals) {
+    $grandBudget += floatval($totals['Annual Total']['budget'] ?? 0);
+    $grandActual += floatval($totals['Annual Total']['actual'] ?? 0);
+    $grandActualPlusForecast += floatval($totals['Annual Total']['actual_plus_forecast'] ?? 0);
+}
+// Variance = ((Actual - Budget) / Budget) * 100
+$grandVariance = calculateVariancePercentage($grandActual, $grandBudget);iance_percentage' => $variance,
         'currency' => $selectedCurrency,
     ];
 }
 
-// Compute Grand Total using recomputed per-category totals
-$grandBudget = 0.0;
-$grandActualPlusForecast = 0.0;
-foreach ($recomputedCategoryTotals as $cat => $totals) {
-    $grandBudget += floatval($totals['Annual Total']['budget'] ?? 0);
-    $grandActualPlusForecast += floatval($totals['Annual Total']['actual_plus_forecast'] ?? 0);
-}
-// Variance = ((Actual + Forecast - Budget) / Budget) * 100
+// Compute Grand Total using recompute$categoryTotals['Grand Total']['Annual Total'] = [
+    'category_name' => 'Grand Total',
+    'period_name' => 'Annual Total',
+    'budget' => $grandBudget,
+    'actual' => $grandActual,
+    'forecast' => 0,
+    'actual_plus_forecast' => $grandActualPlusForecast,
+    'variance_percentage' => $grandVariance,
+    'currency' => $selectedCurrency,
+];ast - Budget) / Budget) * 100
 $grandVariance = ($grandBudget != 0) ? round((($grandActualPlusForecast - $grandBudget) / abs($grandBudget)) * 100, 2) : 0;
 
 // Overwrite categoryTotals to use recomputed values and add Grand Total
@@ -1706,7 +1690,7 @@ if (!$included):
                 echo '<td>' . formatCurrency($grandTotalCalculated['actual'], $selectedCurrency) . '</td>';
                 echo '<td>' . formatCurrency($grandTotalCalculated['forecast'], $selectedCurrency) . '</td>';
                 echo '<td>' . formatCurrency($grandTotalCalculated['actual_plus_forecast'], $selectedCurrency) . '</td>';
-                $grandTotalVariance = ($grandTotalCalculated['budget'] != 0) ? round((($grandTotalCalculated['actual_plus_forecast'] - $grandTotalCalculated['budget']) / abs($grandTotalCalculated['budget'])) * 100, 2) : 0;
+                $grandTotalVariance = ($grandTotalCalculated['budget'] != 0) ? calculateVariancePercentage($grandTotalCalculated['actual'], $grandTotalCalculated['budget']) : 0;
                 $varianceClass = $grandTotalVariance > 0 ? 'variance-positive' : ($grandTotalVariance < 0 ? 'variance-negative' : 'variance-zero');
                 echo '<td class="' . $varianceClass . '">' . $grandTotalVariance . '%</td>';
                 echo '</tr>';
@@ -2896,9 +2880,11 @@ document.addEventListener('DOMContentLoaded', function() {
           <td>${q1BudgetTotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
           <td>${q1ForecastTotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
           <td>${q2BudgetTotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
-          <td>${q2ForecastTotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
-          <td>${annualBudgetTotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
-          <td>${actualForecastTotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+          <td>${q2ForecastTotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}        // Calculate variance
+        let variance = 0;
+        if (grandBudget != 0) {
+          variance = ((grandActual - grandBudget) / Math.abs(grandBudget)) * 100;
+        }d, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
           <td><span class="${varianceClass}">${variance.toFixed(2)}%</span></td>
         `;
         table.querySelector('tbody').appendChild(grandTotalRow);

@@ -151,7 +151,7 @@ try {
             $userCluster = $_SESSION['cluster_name'] ?? null;
             
             // Include currency functions
-            include 'currency_functions.php';
+            include 'currency_functions_pdo.php';
             
             // Get currency rates for the user's cluster
             $currencyRates = [];
@@ -596,13 +596,9 @@ try {
                     $quarterForecastStmt->execute();
                     
                     // Calculate and update variance percentages for all rows with cluster consideration
-                    // Variance = ((Actual + Forecast - Budget) / Budget) * 100
+                    // Variance = ((Actual - Budget) / Budget) * 100
                     $varianceQuery = "UPDATE budget_data 
-                        SET variance_percentage = CASE 
-                            WHEN budget > 0 THEN ROUND((((COALESCE(actual,0) + COALESCE(forecast,0)) - budget) / ABS(budget)) * 100, 2)
-                            WHEN budget = 0 AND (COALESCE(actual,0) + COALESCE(forecast,0)) > 0 THEN 100.00
-                            ELSE 0.00 
-                        END
+                        SET variance_percentage = " . getVarianceCalculationSQL() . "
                         WHERE year2 = ?";
                     
                     // Add cluster condition if user has a cluster
@@ -693,7 +689,7 @@ try {
             $userCluster = $_SESSION['cluster_name'] ?? null;
             
             // Include currency functions
-            include 'currency_functions.php';
+            include 'currency_functions_pdo.php';
             
             // Get currency rates for the user's cluster
             $currencyRates = [];
@@ -789,7 +785,7 @@ try {
             $userCluster = $_SESSION['cluster_name'] ?? null;
             
             // Include currency functions
-            include 'currency_functions.php';
+            include 'currency_functions_pdo.php';
             
             // Get currency rates for the user's cluster
             $currencyRates = [];
@@ -1032,11 +1028,7 @@ try {
                     
                     // Calculate and update variance percentages
                     $varianceQuery = "UPDATE budget_data 
-                        SET variance_percentage = CASE 
-                            WHEN budget > 0 THEN ROUND((((COALESCE(actual,0) + COALESCE(forecast,0)) - budget) / ABS(budget)) * 100, 2)
-                            WHEN budget = 0 AND (COALESCE(actual,0) + COALESCE(forecast,0)) > 0 THEN 100.00
-                            ELSE 0.00 
-                        END
+                        SET variance_percentage = " . getVarianceCalculationSQL() . "
                         WHERE year2 = ?" . ($userCluster ? " AND cluster = ?" : "");
                     
                     if ($userCluster) {
@@ -1083,7 +1075,7 @@ try {
             $userCluster = $_SESSION['cluster_name'] ?? null;
             
             // Include currency functions
-            include 'currency_functions.php';
+            include 'currency_functions_pdo.php';
             
             // Get currency rates for the user's cluster
             $currencyRates = [];
@@ -1144,7 +1136,7 @@ try {
             $userCluster = $_SESSION['cluster_name'] ?? null;
             
             // Include currency functions
-            include 'currency_functions.php';
+            include 'currency_functions_pdo.php';
             
             // Get currency rates for the user's cluster
             $currencyRates = [];
@@ -1471,7 +1463,7 @@ try {
             }
 
             // Include currency functions and rates for conversion
-            include_once 'currency_functions.php';
+            include_once 'currency_functions_pdo.php';
 
             // Determine cluster for rate lookup
             $ratesCluster = $selectedCluster ?? $userCluster ?? null;
@@ -1631,7 +1623,7 @@ try {
                 ];
             }
 
-            include_once 'currency_functions.php';
+            include_once 'currency_functions_pdo.php';
             $ratesCluster = $selectedCluster ?? $userCluster ?? null;
             $currencyRates = [];
             

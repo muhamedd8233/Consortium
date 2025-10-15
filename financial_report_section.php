@@ -60,13 +60,8 @@ if (!$included) {
 } else { 
     // This is the included version for index.php
 ?>
-    <div class="flex-1 flex flex-col overflow-hidden">
-<?php 
-} 
-?>
-
-<?php
-// Include database configuration and currency functions
+    <div clas// Include database configuration and currency functions
+include 'currency_functions_pdo.php';nfiguration and currency functions
 include 'currency_functions.php';
 
 define('INCLUDED_SETUP', true);
@@ -691,17 +686,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                     WHERE year2 = ? AND period_name IN ('Q1', 'Q2', 'Q3', 'Q4')";
                                 
                                 // Add cluster condition if user has a cluster
-                                if ($userCluster) {
-                                    $updateQuarterForecastQuery .= " AND cluster = ?";
-                                    $quarterForecastStmt = $conn->prepare($updateQuarterForecastQuery);
-                                    $quarterForecastStmt->bind_param("is", $year, $userCluster);
-                                } else {
-                                    $quarterForecastStmt = $conn->prepare($updateQuarterForecastQuery);
-                                    $quarterForecastStmt->bind_param("i", $year);
-                                }
-                                $quarterForecastStmt->execute();
-                                
-                                // Calculate and update variance percentages for all rows with cluster consideration
+                                            // Calculate and update variance percentages for all rows with cluster consideration
+                                // Variance = ((Actual - Budget) / Budget) * 100
+                                $varianceQuery = "UPDATE budget_data 
+                                    SET variance_percentage = " . getVarianceCalculationSQL() . "
+                                    WHERE year2 = ?";ance percentages for all rows with cluster consideration
                                 // Variance = ((Budget - (Actual + Forecast)) / Budget) * 100
                                 $varianceQuery = "UPDATE budget_data 
                                     SET variance_percentage = CASE 
