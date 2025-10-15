@@ -1828,7 +1828,7 @@ document.addEventListener('DOMContentLoaded', function() {
         function updateLivePreview() {
             // Get budget heading value - works for both select and input
             const heading = getFieldValue('budgetHeadingSelect') || '--';
-            const outcome = outcomeInput.value || '--';
+            const outcome = getFieldValue('outcomeInput') || '--';
             const activity = getFieldValue('activityInput') || '--';
             const budgetLine = getFieldValue('budgetLineInput') || '--';
             const description = transactionDescriptionInput.value || '--';
@@ -2143,15 +2143,21 @@ document.addEventListener('DOMContentLoaded', function() {
                             } else if (transactionCurrency === 'EUR') {
                                 amountETB = amount * (currencyRates.EUR_to_ETB || 60.0000);
                             }
-                            
-                            // Format the display to show both ETB and original currency
-                            amountFormatted = `<i class="fas fa-money-bill-wave text-green-600 mr-1"></i>${amountETB.toLocaleString('en-US', {minimumFractionDigits: 2})} <span class="text-xs text-gray-500">(${transactionCurrency}: ${amount.toLocaleString('en-US', {minimumFractionDigits: 2})})</span>`;
-                        }
-                        const refNumber = transaction.PVNumber || '--';
+        // Real-time preview updates
+        let formInputs = [
+            budgetHeadingSelect, outcomeInput, activityInput, budgetLineInput, 
+            transactionDescriptionInput, partnerInput, transactionDateInput, amountInput
+        ];
+        
+        formInputs.forEach(input => {
+            if (input) {  // Check if element exists before adding listener
+                input.addEventListener('input', updateLivePreview);
+            }
+        });             const refNumber = transaction.PVNumber || '--';
                         
                         row.innerHTML = `
-                            <td class="py-4 px-4 text-sm font-medium text-gray-900">${transaction.BudgetHeading || '--'}</td>
-                            <td class="py-4 px-4 text-sm text-gray-600">${transaction.Description || '--'}</td>
+                            <td class="py-4 px-4 text-sm font-medium text-gray-9                    budgetHeading: getFieldValue('budgetHeadingSelect'),
+                    outcome: getFieldValue('outcomeInput'),ray-600">${transaction.Description || '--'}</td>
                             <td class="py-4 px-4 text-sm text-gray-600">${transaction.Partner || '--'}</td>
                             <td class="py-4 px-4 text-sm text-gray-600">${refNumber}</td>
                             <td class="py-4 px-4 text-sm text-gray-600">${transaction.EntryDate || '--'}</td>
@@ -2166,11 +2172,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         transactionTableBody.appendChild(row);
                     });
                 } else {
-                    console.error('Failed to load transactions:', data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error loading transactions:', error);
+                    console.error('Failed to load                budgetHeading: getFieldValue('budgetHeadingSelect').trim(),
+                outcome: getFieldValue('outcomeInput').trim(),r('Error loading transactions:', error);
             });
         }
         
@@ -2477,13 +2480,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         const option = document.createElement('option');
                         option.value = value.trim(); // Trim whitespace
                         // No numbering to match database values
-                        option.textContent = value.trim();
-                        element.appendChild(option);
-                    });
-                } else {
-                    // Check if element is already a select
-                    if (element.tagName === 'SELECT') {
-                        // Update existing select options
+                                              // Update form inputs array reference
+                        const inputIndex = formInputs.findIndex(input => input && input.id === elementId);
+                        if (inputIndex !== -1) {
+                            formInputs[inputIndex] = select;
+                        }existing select options
                         // Clear existing options except the first one
                         while (element.options.length > 1) {
                             element.remove(1);
@@ -2516,13 +2517,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             const option = document.createElement('option');
                             option.value = value.trim(); // Trim whitespace
                             option.textContent = value.trim();
-                            select.appendChild(option);
-                        });
-                        
-                        // Replace input with select
-                        parent.replaceChild(select, element);
-                        
-                        // Update event listeners
+                                            // Update form inputs array reference
+                    const inputIndex = formInputs.findIndex(input => input && input.id === elementId);
+                    if (inputIndex !== -1) {
+                        formInputs[inputIndex] = input;
+                    }teners
                         select.addEventListener('input', updateLivePreview);
                         
                         // Update form inputs array reference
@@ -2599,37 +2598,47 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Initial setup on page load
         const savedData = JSON.parse(localStorage.getItem('tempFormData'));
-        const savedDocs = JSON.parse(localStorage.getItem('uploadedDocuments'));
-
-        // Store saved data in a global variable for easier access
-        if (savedData) {
-            window.savedFormData = savedData;
+        const savedDocs = JSON.parse(l                // Handle other form fields
+                if (data.outcome !== undefined) {
+                    const outcomeElement = document.getElementById('outcomeInput');
+                    if (outcomeElement) outcomeElement.value = data.outcome;
+                }          window.savedFormData = savedData;
         }
 
-        if (savedDocs) {
-            uploadedDocuments = savedDocs;
-        }
-        
-        // Clear the preserveFormData flag after we've restored the data
-        const preserveFormData = localStorage.getItem('preserveFormData') === 'true';
-        if (preserveFormData) {
-            localStorage.removeItem('preserveFormData');
-        }
-        
-        // Helper function to set field value (works for both input and select)
-        function setFieldValue(fieldId, value) {
-            const element = document.getElementById(fieldId);
-            if (element) {
-                // Special handling for select elements to ensure options are available
-                if (element.tagName === 'SELECT') {
+        if (savedD                if (data.activity !== undefined) {
+                    const activityElement = document.getElementById('activityInput');
+                    if (activityElement) {
+                        activityElement.value = data.activity;
+                    } else {
+                        allFieldsSet = false;
+                    }
+                } local                if (data.budgetLine !== undefined) {
+                    const budgetLineElement = document.getElementById('budgetLineInput');
+                    if (budgetLineElement) {
+                        budgetLineElement.value = data.budgetLine;
+                    } else {
+                        allFieldsSet = false;
+                    }
+                }          const descElement = document.getElementById('transactionDescriptionInput');
+                    if (descElement) descElement.value = data.transactionDescription;
+                }element = doc                if (data.partner !== undefined) {
+                    const partnerElement = document.getElementById('partnerInput');
+                    if (partnerElement) {
+                        partnerElement.value = data.partner;
+                    } else {
+                        allFieldsSet = false;
+                    }
+                }t.tagName === 'SELECT') {
                     // Wait for options to be populated if it's a select element
                     if (element.options.length > 1 || value === '') {
-                        element.value = value || '';
-                        return true;
+                        element.value = value                 if (data.amount !== undefined) {
+                    const amountElement = document.getElementById('amountInput');
+                    if (amountElement) {
+                        amountElement.value = data.amount;
                     } else {
-                        // Options not loaded yet
-                        return false;
+                        allFieldsSet = false;
                     }
+                }               }
                 } else {
                     element.value = value || '';
                     return true;
@@ -2675,7 +2684,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (partnerInput && data.partner !== undefined) {
                     if (!setFieldValue('partnerInput', data.partner)) allFieldsSet = false;
                 }
-                if (transactionDateInput && data.date !== undefined) transactionDateInput.value = data.date;
+                if (data.date !== undefined) {
+                    const dateElement = document.getElementById('transactionDateInput');
+                    if (dateElement) dateElement.value = data.date;
+                }
                 if (amountInput && data.amount !== undefined) {
                     if (!setFieldValue('amountInput', data.amount)) allFieldsSet = false;
                 }
