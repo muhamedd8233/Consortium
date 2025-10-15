@@ -1828,7 +1828,7 @@ document.addEventListener('DOMContentLoaded', function() {
         function updateLivePreview() {
             // Get budget heading value - works for both select and input
             const heading = getFieldValue('budgetHeadingSelect') || '--';
-            const outcome = getFieldValue('outcomeInput') || '--';
+            const outcome = outcomeInput.value || '--';
             const activity = getFieldValue('activityInput') || '--';
             const budgetLine = getFieldValue('budgetLineInput') || '--';
             const description = transactionDescriptionInput.value || '--';
@@ -2143,21 +2143,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             } else if (transactionCurrency === 'EUR') {
                                 amountETB = amount * (currencyRates.EUR_to_ETB || 60.0000);
                             }
-        // Real-time preview updates
-        let formInputs = [
-            budgetHeadingSelect, outcomeInput, activityInput, budgetLineInput, 
-            transactionDescriptionInput, partnerInput, transactionDateInput, amountInput
-        ];
-        
-        formInputs.forEach(input => {
-            if (input) {  // Check if element exists before adding listener
-                input.addEventListener('input', updateLivePreview);
-            }
-        });             const refNumber = transaction.PVNumber || '--';
+                            
+                            // Format the display to show both ETB and original currency
+                            amountFormatted = `<i class="fas fa-money-bill-wave text-green-600 mr-1"></i>${amountETB.toLocaleString('en-US', {minimumFractionDigits: 2})} <span class="text-xs text-gray-500">(${transactionCurrency}: ${amount.toLocaleString('en-US', {minimumFractionDigits: 2})})</span>`;
+                        }
+                        const refNumber = transaction.PVNumber || '--';
                         
                         row.innerHTML = `
-                            <td class="py-4 px-4 text-sm font-medium text-gray-9                    budgetHeading: getFieldValue('budgetHeadingSelect'),
-                    outcome: getFieldValue('outcomeInput'),ray-600">${transaction.Description || '--'}</td>
+                            <td class="py-4 px-4 text-sm font-medium text-gray-900">${transaction.BudgetHeading || '--'}</td>
+                            <td class="py-4 px-4 text-sm text-gray-600">${transaction.Description || '--'}</td>
                             <td class="py-4 px-4 text-sm text-gray-600">${transaction.Partner || '--'}</td>
                             <td class="py-4 px-4 text-sm text-gray-600">${refNumber}</td>
                             <td class="py-4 px-4 text-sm text-gray-600">${transaction.EntryDate || '--'}</td>
@@ -2172,8 +2166,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         transactionTableBody.appendChild(row);
                     });
                 } else {
-                    console.error('Failed to load                budgetHeading: getFieldValue('budgetHeadingSelect').trim(),
-                outcome: getFieldValue('outcomeInput').trim(),r('Error loading transactions:', error);
+                    console.error('Failed to load transactions:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading transactions:', error);
             });
         }
         
@@ -2378,39 +2375,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error('Err                    }
-                }
+                console.error('Error:', error);
+                showToast('An error occurred while saving the transaction.', 'error');
+            })
+            .finally(() => {
+                // Reset button state
+                addTransactionButton.disabled = false;
+                addTransactionButton.innerHTML = '<i class="fas fa-save"></i> Save Transaction';
+            });
+        });
+        
+        // Clear form button handler
+        clearFormButton.addEventListener('click', function() {
+            clearForm();
+        });
+
+        // Load predefined field configurations
+        function loadFieldConfigurations() {
+            const fields = ['BudgetHeading', 'Outcome', 'Activity', 'BudgetLine', 'Partner', 'Amount'];
+            
+            fields.forEach(fieldName => {
+                // Prepare URL-encoded data with cluster information
+                let bodyData = `action=get_field_config&field_name=${encodeURIComponent(fieldName)}`;
                 
                 // Pass user cluster if available
                 const userCluster = <?php echo json_encode($userCluster); ?>;
-                console.log(`Loading field config for ${fieldName}, userCluster:`, userCluster);
-                if (userCluster) {
-                    bodyData += `&cluster_name=${encodeURIComponent(userCluster)}`;
-                }           .then(data => {
-                    if (data.success) {
-                        console.log(`Successfully loaded ${fieldName} config:`, data.field);
-                        fieldConfigurations[fieldName] = data.field;
-                        setupField(fieldName, data.field);
-                    } else {
-                        console.error(`Failed to load ${fieldName} config:`, data.message);
-                    }
-                })me, if                 .catch(error => {
-                    console.error(`Error loading ${fieldName} config:`, error);
-                    console.log(`Using fallback configuration for ${fieldName}`);{
-                        const defaultOutcomeConfig = {
-                            field_name: 'Outcome',
-                            field_type: 'dropdown',
-                            field_values: '1 - Strengthened the capacity and sustainability of civil society organizations (including new and emerging) to promote peace and democratic governance.,2 - Strengthened the capacity and sustainability of civil society organizations (including new and emerging) to promote peace and democratic governance.,3 - Improved interregional cooperation and inclusive dialogue among target conflict affected regions on democratic governance and peacebuilding.',
-                            is_active: 1,
-                            values_array: [
-                                '1 - Strengthened the capacity and sustainability of civil society organizations (including new and emerging) to promote peace and democratic governance.',
-                                '2 - Strengthened the capacity and sustainability of civil society organizations (including new and emerging) to promote peace and democratic governance.',
-                                '3 - Improved interregional cooperation and inclusive dialogue among target conflict affected regions on democratic governance and peacebuilding.'
-                            ]
-                        };
-                        fieldConfigurations[fieldName] = defaultOutcomeConfig;
-                        setupField(fieldName, defaultOutcomeConfig);
-                    } const userCluster = <?php echo json_encode($userCluster); ?>;
                 if (userCluster) {
                     bodyData += `&cluster_name=${encodeURIComponent(userCluster)}`;
                 }
@@ -2488,11 +2477,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         const option = document.createElement('option');
                         option.value = value.trim(); // Trim whitespace
                         // No numbering to match database values
-                                              // Update form inputs array reference
-                        const inputIndex = formInputs.findIndex(input => input && input.id === elementId);
-                        if (inputIndex !== -1) {
-                            formInputs[inputIndex] = select;
-                        }existing select options
+                        option.textContent = value.trim();
+                        element.appendChild(option);
+                    });
+                } else {
+                    // Check if element is already a select
+                    if (element.tagName === 'SELECT') {
+                        // Update existing select options
                         // Clear existing options except the first one
                         while (element.options.length > 1) {
                             element.remove(1);
@@ -2525,15 +2516,17 @@ document.addEventListener('DOMContentLoaded', function() {
                             const option = document.createElement('option');
                             option.value = value.trim(); // Trim whitespace
                             option.textContent = value.trim();
-                                            // Update form inputs array reference
-                    const inputIndex = formInputs.findIndex(input => input && input.id === elementId);
-                    if (inputIndex !== -1) {
-                        formInputs[inputIndex] = input;
-                    }teners
+                            select.appendChild(option);
+                        });
+                        
+                        // Replace input with select
+                        parent.replaceChild(select, element);
+                        
+                        // Update event listeners
                         select.addEventListener('input', updateLivePreview);
                         
                         // Update form inputs array reference
-                        const inputIndex = formInputs.findIndex(input => input.id === elementId);
+                        const inputIndex = formInputs.findIndex(input => input && input.id === elementId);
                         if (inputIndex !== -1) {
                             formInputs[inputIndex] = select;
                         }
@@ -2575,7 +2568,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     input.addEventListener('input', updateLivePreview);
                     
                     // Update form inputs array reference
-                    const inputIndex = formInputs.findIndex(input => input.id === elementId);
+                    const inputIndex = formInputs.findIndex(input => input && input.id === elementId);
                     if (inputIndex !== -1) {
                         formInputs[inputIndex] = input;
                     }
@@ -2606,47 +2599,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Initial setup on page load
         const savedData = JSON.parse(localStorage.getItem('tempFormData'));
-        const savedDocs = JSON.parse(l                // Handle other form fields
-                if (data.outcome !== undefined) {
-                    const outcomeElement = document.getElementById('outcomeInput');
-                    if (outcomeElement) outcomeElement.value = data.outcome;
-                }          window.savedFormData = savedData;
+        const savedDocs = JSON.parse(localStorage.getItem('uploadedDocuments'));
+
+        // Store saved data in a global variable for easier access
+        if (savedData) {
+            window.savedFormData = savedData;
         }
 
-        if (savedD                if (data.activity !== undefined) {
-                    const activityElement = document.getElementById('activityInput');
-                    if (activityElement) {
-                        activityElement.value = data.activity;
-                    } else {
-                        allFieldsSet = false;
-                    }
-                } local                if (data.budgetLine !== undefined) {
-                    const budgetLineElement = document.getElementById('budgetLineInput');
-                    if (budgetLineElement) {
-                        budgetLineElement.value = data.budgetLine;
-                    } else {
-                        allFieldsSet = false;
-                    }
-                }          const descElement = document.getElementById('transactionDescriptionInput');
-                    if (descElement) descElement.value = data.transactionDescription;
-                }element = doc                if (data.partner !== undefined) {
-                    const partnerElement = document.getElementById('partnerInput');
-                    if (partnerElement) {
-                        partnerElement.value = data.partner;
-                    } else {
-                        allFieldsSet = false;
-                    }
-                }t.tagName === 'SELECT') {
+        if (savedDocs) {
+            uploadedDocuments = savedDocs;
+        }
+        
+        // Clear the preserveFormData flag after we've restored the data
+        const preserveFormData = localStorage.getItem('preserveFormData') === 'true';
+        if (preserveFormData) {
+            localStorage.removeItem('preserveFormData');
+        }
+        
+        // Helper function to set field value (works for both input and select)
+        function setFieldValue(fieldId, value) {
+            const element = document.getElementById(fieldId);
+            if (element) {
+                // Special handling for select elements to ensure options are available
+                if (element.tagName === 'SELECT') {
                     // Wait for options to be populated if it's a select element
                     if (element.options.length > 1 || value === '') {
-                        element.value = value                 if (data.amount !== undefined) {
-                    const amountElement = document.getElementById('amountInput');
-                    if (amountElement) {
-                        amountElement.value = data.amount;
+                        element.value = value || '';
+                        return true;
                     } else {
-                        allFieldsSet = false;
+                        // Options not loaded yet
+                        return false;
                     }
-                }               }
                 } else {
                     element.value = value || '';
                     return true;
@@ -2692,10 +2675,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (partnerInput && data.partner !== undefined) {
                     if (!setFieldValue('partnerInput', data.partner)) allFieldsSet = false;
                 }
-                if (data.date !== undefined) {
-                    const dateElement = document.getElementById('transactionDateInput');
-                    if (dateElement) dateElement.value = data.date;
-                }
+                if (transactionDateInput && data.date !== undefined) transactionDateInput.value = data.date;
                 if (amountInput && data.amount !== undefined) {
                     if (!setFieldValue('amountInput', data.amount)) allFieldsSet = false;
                 }
