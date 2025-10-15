@@ -1776,24 +1776,27 @@ document.addEventListener('DOMContentLoaded', function() {
         const previewHeading = document.getElementById('previewHeading');
         const previewOutcome = document.getElementById('previewOutcome');
         const previewActivity = document.getElementById('previewActivity');
-        const previewBudgetLine = document.getElementById('previewBudgetLine');
-        const previewDescription = document.getElementById('previewDescription');
-        const previewPartner = document.getElementById('previewPartner');
-        const previewDate = document.getElementById('previewDate');
-        const previewAmount = document.getElementById('previewAmount');
-        const previewPvNumber = document.getElementById('previewPvNumber');
-        const previewDocuments = document.getElementById('previewDocuments');
-        const documentsPreview = document.getElementById('documentsPreview');
-        
-        // State variables
-        let uploadedDocuments = {};
-        let fieldConfigurations = {};
-        
-        // Set default date to today
-        const today = new Date().toISOString().split('T')[0];
-        transactionDateInput.value = today;
-        
-        // --- Functions ---
+               // Helper function to get field value (works for both input and select)
+        function getFieldValue(fieldId) {
+            const element = document.getElementById(fieldId);
+            if (!element) return '';
+            
+            // Handle both input and select elements
+            if (element.tagName === 'SELECT') {
+                return element.value ? element.value.trim() : '';
+            } else {
+                return element.value ? element.value.trim() : '';
+            }
+        }viewD        function updateLivePreview() {
+            // Get budget heading value - works for both select and input
+            const heading = getFieldValue('budgetHeadingSelect') || '--';
+            const outcome = getFieldValue('outcomeInput') || '--';
+            const activity = getFieldValue('activityInput') || '--';
+            const budgetLine = getFieldValue('budgetLineInput') || '--';
+            const description = getFieldValue('transactionDescriptionInput') || '--';
+            const partner = getFieldValue('partnerInput') || '--';
+            const date = getFieldValue('transactionDateInput') || '--';
+            const amountValue = getFieldValue('amountInput'); Functions ---
         
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
@@ -1874,16 +1877,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 for (const docName in uploadedDocuments.documents) {
                     docHtml += `<div class="doc-item">
                         <i class="fas fa-file-pdf text-red-500"></i>
-                        <span class="text-sm">${docName}</span>
-                    </div>`;
-                }
-            } else if (hasUploadedFiles) {
-                // Use uploaded files info (files are on server)
-                documentCount = uploadedDocuments.uploadedFiles.length;
-                
-                uploadedDocuments.uploadedFiles.forEach(file => {
-                    docHtml += `<div class="doc-item">
-                        <i class="fas fa-file-pdf text-green-500"></i>
+                        <span class="text-sm">${doc        function checkBudgetAvailability() {
+            // Get budget heading value - works for both select and input
+            const budgetHeading = getFieldValue('budgetHeadingSelect');
+            const amountValue = getFieldValue('amountInput');
+            const amountETB = parseFloat(amountValue) || 0; // Amount entered by user is in ETB
+            const date = getFieldValue('transactionDateInput');          <i class="fas fa-file-pdf text-green-500"></i>
                         <span class="text-sm">${file.documentType}: ${file.originalName} ✓</span>
                     </div>`;
                 });
@@ -2164,25 +2163,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         `;
                         
                         transactionTableBody.appendChild(row);
-                    });
-                } else {
-                    console.error('Failed to load transactions:', data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error loading transactions:', error);
-            });
-        }
-        
-        function viewTransaction(id) {
-            showToast('Transaction details view coming soon!', 'info');
-        }
-
-        // --- Event Listeners ---
-
-        // Real-time preview updates
-        const formInputs = [
-            budgetHeadingSelect, outcomeInput, activityInput, budgetLineInput, 
+                            // Get form data using helper function
+            const formData = {
+                budgetHeading: getFieldValue('budgetHeadingSelect'),
+                outcome: getFieldValue('outcomeInput'),
+                activity: getFieldValue('activityInput'),
+                budgetLine: getFieldValue('budgetLineInput'),
+                description: getFieldValue('transactionDescriptionInput'),
+                partner: getFieldValue('partnerInput'),
+                entryDate: getFieldValue('transactionDateInput'),
+                amount: getFieldValue('amountInput')
+            };nput, budgetLineInput, 
             transactionDescriptionInput, partnerInput, transactionDateInput, amountInput
         ];
         
@@ -2349,11 +2340,61 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // Refresh the page after 2 seconds to update budget metrics
                         setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
+                            window.location.reload                // Pass user cluster if available
+                const userCluster = <?php echo json_encode($userCluster ?? ''); ?>;
+                
+                if (userCluster) {
+                    bodyData += `&cluster_name=${encodeURIComponent(userCluster)}`;
+                }
+                
+                fetch('admin_fields_handler.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: bodyData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.field) {
+                        console.log(`Loaded config for ${fieldName}:`, data.field);
+                        fieldConfigurations[fieldName] = data.field;
+                        setupField(fieldName, data.field);
                     } else {
-                        let errorMessage = data.message || 'Unknown error occurred';
-                        if (data.debug) {
+                        console.error(`Error loading ${fieldName} config:`, data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error loading ${fieldName} config:`, error);
+                    
+                    // For Budget Heading, if not in admin, use default values
+                    if (fieldName === 'BudgetHeading') {
+                        const defaultBudgetHeadingConfig = {
+                            field_name: 'BudgetHeading',
+                            field_type: 'dropdown',
+                            field_values: 'Administrative costs,Operational support costs,Consortium Activities,Targeting new CSOs,Contingency,TestValue',
+                            is_active: 1,
+                            values_array: ['Administrative costs', 'Operational support costs', 'Consortium Activities', 'Targeting new CSOs', 'Contingency', 'TestValue']
+                        };
+                        fieldConfigurations[fieldName] = defaultBudgetHeadingConfig;
+                        setupField(fieldName, defaultBudgetHeadingConfig);
+                    }
+                    
+                    // For Outcome, if not in admin, it should be an input field
+                    if (fieldName === 'Outcome') {
+                        const defaultOutcomeConfig = {
+                            field_name: 'Outcome',
+                            field_type: 'input',
+                            field_values: '',
+                            is_active: 1,
+                            values_array: []
+                        };
+                        fieldConfigurations[fieldName] = defaultOutcomeConfig;
+                        setupField(fieldName, defaultOutcomeConfig);
+                    }
+                });
+            });
+        }
+        
+        // Setup field based on configuration                       if (data.debug) {
                             console.error('Server debug info:', data.debug);
                             if (typeof data.debug === 'string') {
                                 // Check if this is a budget validation error
@@ -2399,57 +2440,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 let bodyData = `action=get_field_config&field_name=${encodeURIComponent(fieldName)}`;
                 
                 // Pass user cluster if available
-                const userCluster = <?php echo json_encode($userCluster); ?>;
-                if (userCluster) {
-                    bodyData += `&cluster_name=${encodeURIComponent(userCluster)}`;
-                }
-                
-                fetch('admin_fields_handler.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: bodyData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        fieldConfigurations[fieldName] = data.field;
-                        setupField(fieldName, data.field);
-                    }
-                })
-                .catch(error => {
-                    console.error(`Error loading ${fieldName} config:`, error);
-                    
-                    // For Budget Heading, if not in admin, use default values
-                    if (fieldName === 'BudgetHeading') {
-                        const defaultBudgetHeadingConfig = {
-                            field_name: 'BudgetHeading',
-                            field_type: 'dropdown',
-                            field_values: 'Administrative costs,Operational support costs,Consortium Activities,Targeting new CSOs,Contingency,TestValue',
-                            is_active: 1,
-                            values_array: ['Administrative costs', 'Operational support costs', 'Consortium Activities', 'Targeting new CSOs', 'Contingency', 'TestValue']
-                        };
-                        fieldConfigurations[fieldName] = defaultBudgetHeadingConfig;
-                        setupField(fieldName, defaultBudgetHeadingConfig);
-                    }
-                    
-                    // For Outcome, if not in admin, it should be an input field
-                    if (fieldName === 'Outcome') {
-                        const defaultOutcomeConfig = {
-                            field_name: 'Outcome',
-                            field_type: 'input',
-                            field_values: '',
-                            is_active: 1,
-                            values_array: []
-                        };
-                        fieldConfigurations[fieldName] = defaultOutcomeConfig;
-                        setupField(fieldName, defaultOutcomeConfig);
-                    }
-                });
-            });
-        }
-        
-        // Setup field based on configuration
+                const userCluster = <?php echo json_encode($us        // Setup field based on configuration
         function setupField(fieldName, config) {
+            console.log(`Setting up field ${fieldName} with config:`, config);
+            
             const fieldMap = {
                 'BudgetHeading': 'budgetHeadingSelect',
                 'Outcome': 'outcomeInput',
@@ -2462,7 +2456,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const elementId = fieldMap[fieldName];
             const element = document.getElementById(elementId);
             
-            if (!element || !config.is_active) return;
+            console.log(`Element ${elementId} found:`, element);
+            
+            if (!element || !config.is_active) {
+                console.log(`Skipping ${fieldName}: element not found or not active`);
+                return;
+            }
             
             if (config.field_type === 'dropdown' && config.values_array && config.values_array.length > 0) {
                 // For Budget Heading, update the existing select options
@@ -2498,6 +2497,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                     } else {
                         // Convert input to dropdown for other fields
+                        console.log(`Converting ${fieldName} from input to dropdown`);
                         const parent = element.parentNode;
                         
                         const select = document.createElement('select');
@@ -2539,6 +2539,38 @@ document.addEventListener('DOMContentLoaded', function() {
                         else if (fieldName === 'Amount') amountInput = select;
                     }
                 }
+            } else if (config.field_type === 'dropdown' && (!config.values_array || config.values_array.length === 0)) {
+                // Dropdown field but no values configured - convert to input
+                if (element.tagName === 'SELECT') {
+                    const parent = element.parentNode;
+                    
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.id = elementId;
+                    input.className = element.className;
+                    input.required = element.required;
+                    input.placeholder = `Enter ${fieldName}...`;
+                    input.readOnly = false;
+                    
+                    // Replace select with input
+                    parent.replaceChild(input, element);
+                    
+                    // Update event listeners
+                    input.addEventListener('input', updateLivePreview);
+                    
+                    // Update form inputs array reference
+                    const inputIndex = formInputs.findIndex(input => input.id === elementId);
+                    if (inputIndex !== -1) {
+                        formInputs[inputIndex] = input;
+                    }
+                    
+                    // Update global reference
+                    if (fieldName === 'Outcome') outcomeInput = input;
+                    else if (fieldName === 'Activity') activityInput = input;
+                    else if (fieldName === 'BudgetLine') budgetLineInput = input;
+                    else if (fieldName === 'Partner') partnerInput = input;
+                    else if (fieldName === 'Amount') amountInput = input;
+                }
             } else if (config.field_type === 'input') {
                 // Check if element is currently a select
                 if (element.tagName === 'SELECT') {
@@ -2546,6 +2578,56 @@ document.addEventListener('DOMContentLoaded', function() {
                     const parent = element.parentNode;
                     
                     const input = document.createElement('input');
+                    input.type = 'text';
+                    input.id = elementId;
+                    input.className = element.className;
+                    input.required = element.required;
+                    
+                    // Set placeholder and value from config
+                    if (config.field_values) {
+                        input.placeholder = config.field_values;
+                        input.readOnly = true;
+                        input.value = config.field_values;
+                    } else {
+                        input.placeholder = `Enter ${fieldName}...`;
+                        input.readOnly = false;
+                    }
+                    
+                    // Replace select with input
+                    parent.replaceChild(input, element);
+                    
+                    // Update event listeners
+                    input.addEventListener('input', updateLivePreview);
+                    
+                    // Update form inputs array reference
+                    const inputIndex = formInputs.findIndex(input => input.id === elementId);
+                    if (inputIndex !== -1) {
+                        formInputs[inputIndex] = input;
+                    }
+                    
+                    // Update global reference
+                    if (fieldName === 'Outcome') outcomeInput = input;
+                    else if (fieldName === 'Activity') activityInput = input;
+                    else if (fieldName === 'BudgetLine') budgetLineInput = input;
+                    else if (fieldName === 'Partner') partnerInput = input;
+                    else if (fieldName === 'Amount') amountInput = input;
+                } else {
+                    // For input fields, set placeholder text if predefined text exists
+                    if (config.field_values) {
+                        element.placeholder = config.field_values;
+                        // Make the field read-only if it has predefined data
+                        element.readOnly = true;
+                        element.value = config.field_values;
+                    } else {
+                        // Default placeholder if no predefined text
+                        element.placeholder = `Enter ${fieldName}...`;
+                        // Make the field editable if no predefined data
+                        element.readOnly = false;
+                        element.value = ''; // Clear any existing value
+                    }
+                }
+            }
+        }cument.createElement('input');
                     input.type = 'text';
                     input.id = elementId;
                     input.className = element.className;
