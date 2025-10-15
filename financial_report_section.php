@@ -2378,31 +2378,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                showToast('An error occurred while saving the transaction.', 'error');
-            })
-            .finally(() => {
-                // Reset button state
-                addTransactionButton.disabled = false;
-                addTransactionButton.innerHTML = '<i class="fas fa-save"></i> Save Transaction';
-            });
-        });
-        
-        // Clear form button handler
-        clearFormButton.addEventListener('click', function() {
-            clearForm();
-        });
-
-        // Load predefined field configurations
-        function loadFieldConfigurations() {
-            const fields = ['BudgetHeading', 'Outcome', 'Activity', 'BudgetLine', 'Partner', 'Amount'];
-            
-            fields.forEach(fieldName => {
-                // Prepare URL-encoded data with cluster information
-                let bodyData = `action=get_field_config&field_name=${encodeURIComponent(fieldName)}`;
+                console.error('Err                    }
+                }
                 
                 // Pass user cluster if available
                 const userCluster = <?php echo json_encode($userCluster); ?>;
+                console.log(`Loading field config for ${fieldName}, userCluster:`, userCluster);
+                if (userCluster) {
+                    bodyData += `&cluster_name=${encodeURIComponent(userCluster)}`;
+                }           .then(data => {
+                    if (data.success) {
+                        console.log(`Successfully loaded ${fieldName} config:`, data.field);
+                        fieldConfigurations[fieldName] = data.field;
+                        setupField(fieldName, data.field);
+                    } else {
+                        console.error(`Failed to load ${fieldName} config:`, data.message);
+                    }
+                })me, if                 .catch(error => {
+                    console.error(`Error loading ${fieldName} config:`, error);
+                    console.log(`Using fallback configuration for ${fieldName}`);{
+                        const defaultOutcomeConfig = {
+                            field_name: 'Outcome',
+                            field_type: 'dropdown',
+                            field_values: '1 - Strengthened the capacity and sustainability of civil society organizations (including new and emerging) to promote peace and democratic governance.,2 - Strengthened the capacity and sustainability of civil society organizations (including new and emerging) to promote peace and democratic governance.,3 - Improved interregional cooperation and inclusive dialogue among target conflict affected regions on democratic governance and peacebuilding.',
+                            is_active: 1,
+                            values_array: [
+                                '1 - Strengthened the capacity and sustainability of civil society organizations (including new and emerging) to promote peace and democratic governance.',
+                                '2 - Strengthened the capacity and sustainability of civil society organizations (including new and emerging) to promote peace and democratic governance.',
+                                '3 - Improved interregional cooperation and inclusive dialogue among target conflict affected regions on democratic governance and peacebuilding.'
+                            ]
+                        };
+                        fieldConfigurations[fieldName] = defaultOutcomeConfig;
+                        setupField(fieldName, defaultOutcomeConfig);
+                    } const userCluster = <?php echo json_encode($userCluster); ?>;
                 if (userCluster) {
                     bodyData += `&cluster_name=${encodeURIComponent(userCluster)}`;
                 }
